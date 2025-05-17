@@ -48,7 +48,8 @@ set(EXERCISES
     Hello3D
     TriangleTex
     SpherePhong
-	M2
+	  M2
+    Vivencial1
 )
 
 add_compile_options(-Wno-pragmas)
@@ -78,3 +79,5 @@ foreach(EXERCISE ${EXERCISES})
     target_include_directories(${EXERCISE} PRIVATE ${CMAKE_SOURCE_DIR}/include/glad ${glm_SOURCE_DIR} ${stb_image_SOURCE_DIR})
     target_link_libraries(${EXERCISE} glfw ${OPENGL_LIBS})
 endforeach()
+
+target_sources(Vivencial1 PRIVATE CodeSnippets/LoadSimpleOBJ.cpp)

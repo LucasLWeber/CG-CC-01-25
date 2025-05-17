@@ -70,6 +70,16 @@ glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, 10.0f); // Posição inicial da c�
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f); // Direção para onde a câmera está olhando
 glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f); // Vetor para cima
 
+int nVertices1 = 0, nVertices2 = 0;
+GLuint VAO1, VAO2;
+
+// Seleção de objeto atual
+int selectedObject = 1; // 1 para o primeiro, 2 para o segundo
+
+// Transformações separadas (posição no eixo X como exemplo)
+float pos1X = -2.0f, pos1Y = 0.0f;
+float pos2X =  2.0f, pos2Y = 0.0f;
+
 bool rotateX=false, rotateY=false, rotateZ=false;
 
 // Função MAIN
@@ -107,8 +117,10 @@ int main()
 
     // Compilação dos shaders e geometria
     GLuint shaderID = setupShader();
-	int nVertices = 0;
-    GLuint VAO = loadSimpleOBJ("../assets/Modelos3D/Suzanne.obj", nVertices);
+
+	// Carrega os dois modelos Suzanne
+    VAO1 = loadSimpleOBJ("../assets/Modelos3D/Suzanne.obj", nVertices1);
+	VAO2 = loadSimpleOBJ("../assets/Modelos3D/Suzanne.obj", nVertices2);
 
     glUseProgram(shaderID);
 
@@ -132,15 +144,7 @@ int main()
         // Tempo para animação
         float angle = (GLfloat)glfwGetTime();
 
-        // MATRIZ MODEL
-        glm::mat4 model = glm::mat4(1.0f);
-        if (rotateX)
-            model = glm::rotate(model, angle, glm::vec3(1.0f, 0.0f, 0.0f));
-        else if (rotateY)
-            model = glm::rotate(model, angle, glm::vec3(0.0f, 1.0f, 0.0f));
-        else if (rotateZ)
-            model = glm::rotate(model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
-
+        
         // MATRIZ VIEW (câmera)
         glm::mat4 view = glm::lookAt(
             cameraPos,
@@ -156,25 +160,53 @@ int main()
             100.0f
         );
 
-        // Enviando matrizes para o shader
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		// Configurações comuns
+        glLineWidth(10);
+        glPointSize(20);
+
+		// === Primeira Suzanne (VAO1) ===
+        glm::mat4 model1 = glm::mat4(1.0f);
+        model1 = glm::translate(model1, glm::vec3(pos1X, pos1Y, 0.0f));
+        if (rotateX) model1 = glm::rotate(model1, angle, glm::vec3(1.0f, 0.0f, 0.0f));
+        else if (rotateY) model1 = glm::rotate(model1, angle, glm::vec3(0.0f, 1.0f, 0.0f));
+        else if (rotateZ) model1 = glm::rotate(model1, angle, glm::vec3(0.0f, 0.0f, 1.0f));
+
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model1));
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
+        glBindVertexArray(VAO1);
+        glDrawArrays(GL_TRIANGLES, 0, nVertices1);
+
+        // === Segunda Suzanne (VAO2) ===
+        glm::mat4 model2 = glm::mat4(1.0f);
+        model2 = glm::translate(model2, glm::vec3(pos2X, pos2Y, 0.0f));
+        if (rotateX) model2 = glm::rotate(model2, angle, glm::vec3(1.0f, 0.0f, 0.0f));
+        else if (rotateY) model2 = glm::rotate(model2, angle, glm::vec3(0.0f, 1.0f, 0.0f));
+        else if (rotateZ) model2 = glm::rotate(model2, angle, glm::vec3(0.0f, 0.0f, 1.0f));
+
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model2));
+        glBindVertexArray(VAO2);
+        glDrawArrays(GL_TRIANGLES, 0, nVertices2);
+
+        glBindVertexArray(0);
+
+		/* Removido para desenho de dois VAOs
         // Desenho
         glLineWidth(10);
         glPointSize(20);
-        glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, nVertices);  // Preenchido
         // glDrawArrays(GL_POINTS, 0, nVertices);     // Pontos
         glBindVertexArray(0);
+		*/
 
         // Troca de buffers
         glfwSwapBuffers(window);
     }
 
     // Limpeza
-    glDeleteVertexArrays(1, &VAO);
+    glDeleteVertexArrays(1, &VAO1);
+    glDeleteVertexArrays(1, &VAO2);
     glfwTerminate();
     return 0;
 }
@@ -189,8 +221,33 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
     if (action == GLFW_PRESS || action == GLFW_REPEAT)
     {
+		const float cameraSpeed = 0.1f;
+    	const float moveStep = 0.1f;
+
         if (key == GLFW_KEY_ESCAPE)
             glfwSetWindowShouldClose(window, true);
+
+		// Seleciona objeto 1 ou 2
+		if (key == GLFW_KEY_1) selectedObject = 1;
+        if (key == GLFW_KEY_2) selectedObject = 2;
+
+		// Movimentação do objeto selecionado
+        if (key == GLFW_KEY_LEFT) {
+            if (selectedObject == 1) pos1X -= moveStep;
+            else if (selectedObject == 2) pos2X -= moveStep;
+        }
+        if (key == GLFW_KEY_RIGHT) {
+            if (selectedObject == 1) pos1X += moveStep;
+            else if (selectedObject == 2) pos2X += moveStep;
+        }
+		if (key == GLFW_KEY_UP) {
+			if (selectedObject == 1) pos1Y += moveStep;
+            else if (selectedObject == 2) pos2Y += moveStep;
+		}
+		if (key == GLFW_KEY_DOWN) {
+			if (selectedObject == 1) pos1Y -= moveStep;
+            else if (selectedObject == 2) pos2Y -= moveStep;
+		}
 
         // Rotação do cubo (opcional)
         if (key == GLFW_KEY_X) { rotateX = true; rotateY = false; rotateZ = false; }

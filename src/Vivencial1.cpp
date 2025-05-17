@@ -77,10 +77,11 @@ GLuint VAO1, VAO2;
 int selectedObject = 1; // 1 para o primeiro, 2 para o segundo
 
 // Transformações separadas (posição no eixo X como exemplo)
-float pos1X = -2.0f, pos1Y = 0.0f;
-float pos2X =  2.0f, pos2Y = 0.0f;
+float pos1X = -2.0f, pos1Y = 0.0f, pos1Z = 0.0f;
+float pos2X =  2.0f, pos2Y = 0.0f, pos2Z = 0.0f;
+bool rotate1X = false, rotate1Y = false, rotate1Z = false;
+bool rotate2X = false, rotate2Y = false, rotate2Z = false;
 
-bool rotateX=false, rotateY=false, rotateZ=false;
 
 // Função MAIN
 int main()
@@ -120,7 +121,7 @@ int main()
 
 	// Carrega os dois modelos Suzanne
     VAO1 = loadSimpleOBJ("../assets/Modelos3D/Suzanne.obj", nVertices1);
-	VAO2 = loadSimpleOBJ("../assets/Modelos3D/Suzanne.obj", nVertices2);
+	VAO2 = loadSimpleOBJ("../assets/Modelos3D/Cube.obj", nVertices2);
 
     glUseProgram(shaderID);
 
@@ -166,10 +167,10 @@ int main()
 
 		// === Primeira Suzanne (VAO1) ===
         glm::mat4 model1 = glm::mat4(1.0f);
-        model1 = glm::translate(model1, glm::vec3(pos1X, pos1Y, 0.0f));
-        if (rotateX) model1 = glm::rotate(model1, angle, glm::vec3(1.0f, 0.0f, 0.0f));
-        else if (rotateY) model1 = glm::rotate(model1, angle, glm::vec3(0.0f, 1.0f, 0.0f));
-        else if (rotateZ) model1 = glm::rotate(model1, angle, glm::vec3(0.0f, 0.0f, 1.0f));
+        model1 = glm::translate(model1, glm::vec3(pos1X, pos1Y, pos1Z));
+        if (rotate1X) model1 = glm::rotate(model1, angle, glm::vec3(1.0f, 0.0f, 0.0f));
+        else if (rotate1Y) model1 = glm::rotate(model1, angle, glm::vec3(0.0f, 1.0f, 0.0f));
+        else if (rotate1Z) model1 = glm::rotate(model1, angle, glm::vec3(0.0f, 0.0f, 1.0f));
 
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model1));
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
@@ -180,10 +181,10 @@ int main()
 
         // === Segunda Suzanne (VAO2) ===
         glm::mat4 model2 = glm::mat4(1.0f);
-        model2 = glm::translate(model2, glm::vec3(pos2X, pos2Y, 0.0f));
-        if (rotateX) model2 = glm::rotate(model2, angle, glm::vec3(1.0f, 0.0f, 0.0f));
-        else if (rotateY) model2 = glm::rotate(model2, angle, glm::vec3(0.0f, 1.0f, 0.0f));
-        else if (rotateZ) model2 = glm::rotate(model2, angle, glm::vec3(0.0f, 0.0f, 1.0f));
+        model2 = glm::translate(model2, glm::vec3(pos2X, pos2Y, pos2Z));
+        if (rotate2X) model2 = glm::rotate(model2, angle, glm::vec3(1.0f, 0.0f, 0.0f));
+        else if (rotate2Y) model2 = glm::rotate(model2, angle, glm::vec3(0.0f, 1.0f, 0.0f));
+        else if (rotate2Z) model2 = glm::rotate(model2, angle, glm::vec3(0.0f, 0.0f, 1.0f));
 
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model2));
         glBindVertexArray(VAO2);
@@ -217,56 +218,77 @@ int main()
 // ou solta via GLFW
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    const float cameraSpeed = 0.1f;
+    const float moveStep = 0.1f;
 
     if (action == GLFW_PRESS || action == GLFW_REPEAT)
     {
-		const float cameraSpeed = 0.1f;
-    	const float moveStep = 0.1f;
-
         if (key == GLFW_KEY_ESCAPE)
             glfwSetWindowShouldClose(window, true);
 
-		// Seleciona objeto 1 ou 2
-		if (key == GLFW_KEY_1) selectedObject = 1;
+        // Seleciona objeto 1 ou 2
+        if (key == GLFW_KEY_1) selectedObject = 1;
         if (key == GLFW_KEY_2) selectedObject = 2;
 
-		// Movimentação do objeto selecionado
+        // Movimentação do objeto selecionado
         if (key == GLFW_KEY_LEFT) {
             if (selectedObject == 1) pos1X -= moveStep;
-            else if (selectedObject == 2) pos2X -= moveStep;
+            else pos2X -= moveStep;
         }
         if (key == GLFW_KEY_RIGHT) {
             if (selectedObject == 1) pos1X += moveStep;
-            else if (selectedObject == 2) pos2X += moveStep;
+            else pos2X += moveStep;
         }
-		if (key == GLFW_KEY_UP) {
-			if (selectedObject == 1) pos1Y += moveStep;
-            else if (selectedObject == 2) pos2Y += moveStep;
-		}
-		if (key == GLFW_KEY_DOWN) {
-			if (selectedObject == 1) pos1Y -= moveStep;
-            else if (selectedObject == 2) pos2Y -= moveStep;
-		}
+        if (key == GLFW_KEY_UP) {
+            if (selectedObject == 1) pos1Y += moveStep;
+            else pos2Y += moveStep;
+        }
+        if (key == GLFW_KEY_DOWN) {
+            if (selectedObject == 1) pos1Y -= moveStep;
+            else pos2Y -= moveStep;
+        }
 
-        // Rotação do cubo (opcional)
-        if (key == GLFW_KEY_X) { rotateX = true; rotateY = false; rotateZ = false; }
-        if (key == GLFW_KEY_Y) { rotateX = false; rotateY = true; rotateZ = false; }
-        if (key == GLFW_KEY_Z) { rotateX = false; rotateY = false; rotateZ = true; }
+        // Zoom individual (movimento no eixo Z do objeto)
+        if (key == GLFW_KEY_I) {
+            if (selectedObject == 1) pos1Z += moveStep;
+            else pos2Z += moveStep;
+        }
+        if (key == GLFW_KEY_J) {
+            if (selectedObject == 1) pos1Z -= moveStep;
+            else pos2Z -= moveStep;
+        }
 
-        // Movimento da câmera
+        // Rotação do objeto selecionado
+        if (key == GLFW_KEY_X) {
+            if (selectedObject == 1) {
+                rotate1X = true; rotate1Y = false; rotate1Z = false;
+            } else {
+                rotate2X = true; rotate2Y = false; rotate2Z = false;
+            }
+        }
+        if (key == GLFW_KEY_Y) {
+            if (selectedObject == 1) {
+                rotate1X = false; rotate1Y = true; rotate1Z = false;
+            } else {
+                rotate2X = false; rotate2Y = true; rotate2Z = false;
+            }
+        }
+        if (key == GLFW_KEY_Z) {
+            if (selectedObject == 1) {
+                rotate1X = false; rotate1Y = false; rotate1Z = true;
+            } else {
+                rotate2X = false; rotate2Y = false; rotate2Z = true;
+            }
+        }
+
+        // Movimento da câmera global (continua funcionando normalmente)
         if (key == GLFW_KEY_W)
-            cameraPos -= cameraSpeed * cameraUp;
+            cameraPos -= moveStep * cameraUp;
         if (key == GLFW_KEY_S)
-            cameraPos += cameraSpeed * cameraUp;
+            cameraPos += moveStep * cameraUp;
         if (key == GLFW_KEY_A)
-            cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+            cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * moveStep;
         if (key == GLFW_KEY_D)
-            cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-        if (key == GLFW_KEY_I)
-            cameraPos += cameraSpeed * cameraFront;
-        if (key == GLFW_KEY_J)
-            cameraPos -= cameraSpeed * cameraFront;
+            cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * moveStep;
     }
 }
 

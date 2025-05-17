@@ -164,8 +164,8 @@ int main()
         glLineWidth(10);
         glPointSize(20);
         glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 18);  // Preenchido
-        glDrawArrays(GL_POINTS, 0, 18);     // Pontos
+        glDrawArrays(GL_TRIANGLES, 0, 36);  // Preenchido
+        glDrawArrays(GL_POINTS, 0, 36);     // Pontos
         glBindVertexArray(0);
 
         // Troca de buffers

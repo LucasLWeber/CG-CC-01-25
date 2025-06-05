@@ -165,7 +165,7 @@ int main()
         glPointSize(20);
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);  // Preenchido
-        glDrawArrays(GL_POINTS, 0, 36);     // Pontos
+        // glDrawArrays(GL_POINTS, 0, 18);     // Pontos
         glBindVertexArray(0);
 
         // Troca de buffers
@@ -198,17 +198,17 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
         // Movimento da câmera
         if (key == GLFW_KEY_W)
-            cameraPos -= cameraSpeed * cameraUp;
+					cameraPos -= cameraSpeed * cameraUp;
         if (key == GLFW_KEY_S)
-            cameraPos += cameraSpeed * cameraUp;
+					cameraPos += cameraSpeed * cameraUp;
         if (key == GLFW_KEY_A)
-            cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+					cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
         if (key == GLFW_KEY_D)
-            cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+					cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
         if (key == GLFW_KEY_I)
-            cameraPos += cameraSpeed * cameraFront;
+				cameraPos += cameraSpeed * cameraFront;
         if (key == GLFW_KEY_J)
-            cameraPos -= cameraSpeed * cameraFront;
+					cameraPos -= cameraSpeed * cameraFront;
     }
 }
 

@@ -1,6 +1,6 @@
 # Registro de Entregas - Atividades Vivenciais
 
-## Vivencial 1
+## Vivencial 1 - 17/05/2025
 
 Alunos: Eduardo Colissi, Lucas Weber e Rodrigo Fischer
 
@@ -9,8 +9,6 @@ Nesta entrega foi implementado o uso da função `LoadSimpleObj`, responsável p
 O programa realiza o carregamento de **dois objetos 3D distintos** por meio de dois VAOs. Cada objeto pode ser **controlado individualmente** (posição e rotação), de acordo com as teclas mapeadas. O **objeto 1 é selecionado por padrão**, mas o usuário pode alternar entre os dois utilizando as teclas `1` e `2`.
 
 A movimentação da câmera continua funcional e atua globalmente na cena.
-
----
 
 ## 🎮 Controles por Teclado
 
@@ -33,7 +31,6 @@ A movimentação da câmera continua funcional e atua globalmente na cena.
 | `D`           | Move a câmera para a direita (no eixo X)           | Câmera (global)              |
 | `ESC`         | Encerra a aplicação                                | Global                       |
 
----
 
 ## 📌 Observações
 
@@ -43,3 +40,52 @@ A movimentação da câmera continua funcional e atua globalmente na cena.
 
 ---
 
+## Vivencial 2 - 31/05/2025
+
+Alunos: Lucas Weber e Rodrigo Fischer
+
+Este projeto é um renderizador 3D desenvolvido em C++ com OpenGL 4.x, capaz de carregar modelos .obj, aplicar iluminação básica e manipular interativamente a posição da luz e os tipos de iluminação via teclado.
+
+## 🚀 Funcionalidades Implementadas
+
+Suporte a arquivos .obj com:
+- Vértices (v)
+- Coordenadas de textura (vt)
+- Normais (vn)
+- Faces triangulares (f v/vt/vn)
+
+Dados carregados:
+- Vértices 3D (vec3)
+- UVs 2D (vec2)
+- Normais 3D (vec3)
+
+## 🎨 Pipeline Gráfico
+Shaders implementados:
+- Vertex Shader: processa posições, normais e UVs.
+- Fragment Shader: realiza cálculo de iluminação e cor final por fragmento.
+- Suporte à renderização com glDrawArrays.
+
+## 💡 Iluminação
+Iluminação baseada em três fontes:
+- Luz-chave (key light)
+- Luz de preenchimento (fill light)
+- Luz de fundo (back light)
+- Controle interativo via teclado para ativar/desativar cada luz.
+
+
+## 🎮 Controles por Teclado
+
+| Tecla             | Ação                                  |
+| ----------------- | ------------------------------------- |
+| `ESC`             | Fecha a janela                        |
+| `← (Left Arrow)`  | Move a luz para a esquerda (`x--`)    |
+| `→ (Right Arrow)` | Move a luz para a direita (`x++`)     |
+| `↑ (Up Arrow)`    | Move a luz para cima (`y++`)          |
+| `↓ (Down Arrow)`  | Move a luz para baixo (`y--`)         |
+| `Page Up`         | Aproxima a luz da cena (`z++`)        |
+| `Page Down`       | Afasta a luz da cena (`z--`)          |
+| `1`               | Ativa/desativa a luz-chave            |
+| `2`               | Ativa/desativa a luz de preenchimento |
+| `3`               | Ativa/desativa a luz de fundo         |
+
+---

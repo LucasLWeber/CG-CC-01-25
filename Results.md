@@ -12,5 +12,10 @@
 O cubo rotaciona nas 3 dimensões por meio das teclas X, Y e Z. E se movimenta via WASD e IJ.
 
 ---
+##### M3 - Carregamento de texturas em objetos
+
+![Carregamento de texturas](./results/m3-result.png)
+
+O objeto rotaciona nas 3 dimensões por meio das teclas X, Y e Z. E se movimenta via WASD e IJ.
 
 Ciência da Computação Unisinos, atividade acadêmica de Computação Gráfica - Lucas Weber - 2025.

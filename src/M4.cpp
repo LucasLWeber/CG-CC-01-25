@@ -39,30 +39,56 @@ const GLchar *vertexShaderSource = R"(
 	layout (location = 0) in vec3 position;
 	layout (location = 1) in vec3 color;
 	layout (location = 2) in vec2 tex_coord;
+	layout (location = 3) in vec3 normal;
 	out vec4 vertexColor;
 	out vec2 texCoord;
+	out vec3 fragPos;
+	out vec3 fragNormal;
 	uniform mat4 model;
 	uniform mat4 view;
 	uniform mat4 projection;
 	void main()
 	{
-		gl_Position = projection * view * model * vec4(position, 1.0);
-		vertexColor = vec4(color, 1.0);
-		texCoord = vec2(tex_coord.x, 1 - tex_coord.y);
+			vec4 worldPos = model * vec4(position, 1.0);
+			gl_Position = projection * view * worldPos;
+			vertexColor = vec4(color, 1.0);
+			texCoord = vec2(tex_coord.x, 1.0 - tex_coord.y);
+			fragPos = vec3(worldPos);
+			fragNormal = mat3(transpose(inverse(model))) * normal;
 	}
 )";
 
 
 const GLchar *fragmentShaderSource = R"(
-#version 400
-in vec4 vertexColor;
-in vec2 texCoord;
-out vec4 color;
-uniform sampler2D tex_buffer;
-void main()
-{
-		color = texture(tex_buffer, texCoord);
-}
+	#version 400
+	in vec4 vertexColor;
+	in vec3 fragNormal;
+	in vec3 fragPos;
+	in vec2 texCoord;
+	uniform vec3 ka;
+	uniform float kd;
+	uniform vec3 ks;
+	uniform float q;
+	uniform vec3 lightPos;
+	uniform vec3 lightColor;
+	uniform vec3 cameraPos;
+	uniform sampler2D colorBuffer;
+	out vec4 color;
+	void main()
+	{
+			vec3 ambient = lightColor * ka;
+			vec3 N = normalize(fragNormal);
+			vec3 L = normalize(lightPos - fragPos);
+			float diff = max(dot(N, L), 0.0);
+			vec3 diffuse = diff * lightColor * kd;
+			vec3 R = reflect(-L, N);
+			vec3 V = normalize(cameraPos - fragPos);
+			float spec = pow(max(dot(R, V), 0.0), q);
+			vec3 specular = spec * ks * lightColor;
+			vec3 texColor = texture(colorBuffer, texCoord).rgb;
+			vec3 result = (ambient + diffuse) * texColor + specular;
+			color = vec4(result, 1.0f);
+	}
 )";
 
 const GLuint WIDTH = 600, HEIGHT = 600;
@@ -78,6 +104,9 @@ glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, 15.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f); 
 glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f); 
 
+glm::vec3 ambientColor(0.0f), diffuseColor(0.0f), specularColor(0.0f), emissiveColor(0.0f);
+float     diffuseScalar = 0.8f;
+float     shininess     = 32.0f;
 
 int main()
 {
@@ -134,9 +163,22 @@ int main()
 			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 			glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 			glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+			
+			// Luz e material
+			glUniform3f(glGetUniformLocation(shaderID, "ka"), ambientColor.r, ambientColor.g, ambientColor.b);
+			glUniform3f(glGetUniformLocation(shaderID, "kd"), diffuseColor.r, diffuseColor.g, diffuseColor.b);
+			glUniform3f(glGetUniformLocation(shaderID, "ks"), specularColor.r, specularColor.g, specularColor.b);
+			glUniform3f(glGetUniformLocation(shaderID, "ke"), emissiveColor.r, emissiveColor.g, emissiveColor.b);
+			glUniform1f(glGetUniformLocation(shaderID, "q"), shininess);
+
+			glUniform3f(glGetUniformLocation(shaderID, "lightPos"), 0.0f, 2.0f, 0.0f);
+			glUniform3f(glGetUniformLocation(shaderID, "lightColor"), 1.3f, 1.3f, 1.3f);
+			glUniform3f(glGetUniformLocation(shaderID, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
+
 			glActiveTexture(GL_TEXTURE0);
 			if (geometry.textureID > 0) glBindTexture(GL_TEXTURE_2D, geometry.textureID);
-			glUniform1i(glGetUniformLocation(shaderID, "texture1"), 0); 
+			glUniform1i(glGetUniformLocation(shaderID, "colorBuffer"), 0); 
+
 			glBindVertexArray(geometry.VAO);
 			glDrawArrays(GL_TRIANGLES, 0, geometry.vertexCount);
 			glBindVertexArray(0);
@@ -394,7 +436,26 @@ string loadMTL(const string& path)
         if (keyword == "map_Kd")
         {
             iss >> texturePath;
-            break;
+        }
+        else if (keyword == "Ka")
+        {
+            iss >> ambientColor.r >> ambientColor.g >> ambientColor.b;
+        }
+        else if (keyword == "Kd")
+        {
+            iss >> diffuseColor.r >> diffuseColor.g >> diffuseColor.b;
+        }
+        else if (keyword == "Ks")
+        {
+            iss >> specularColor.r >> specularColor.g >> specularColor.b;
+        }
+        else if (keyword == "Ns")
+        {
+            iss >> shininess;
+        }
+        else if (keyword == "Ke")
+        {
+            iss >> emissiveColor.r >> emissiveColor.g >> emissiveColor.b;
         }
     }
     mtlFile.close();

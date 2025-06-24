@@ -18,4 +18,11 @@ O cubo rotaciona nas 3 dimensões por meio das teclas X, Y e Z. E se movimenta v
 
 O objeto rotaciona nas 3 dimensões por meio das teclas X, Y e Z. E se movimenta via WASD e IJ.
 
+---
+##### M4 - Implementação modelo de Phong
+
+![Carregamento de texturas](./results/m4-result.png)
+
+O objeto rotaciona nas 3 dimensões por meio das teclas X, Y e Z. E se movimenta via WASD e IJ.
+
 Ciência da Computação Unisinos, atividade acadêmica de Computação Gráfica - Lucas Weber - 2025.

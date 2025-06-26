@@ -372,7 +372,12 @@ Geometry setupGeometry(const char* filepath)
     vertices.reserve(vert.size() * 8); 
     for (size_t i = 0; i < vert.size(); ++i)
     {
-        vertices.insert(vertices.end(), {vert[i].x, vert[i].y, vert[i].z, 1.0f, 0.0f, 0.0f, uvs[i].x, uvs[i].y});
+        vertices.insert(vertices.end(), {
+					vert[i].x, vert[i].y, vert[i].z,
+					normals[i].x, normals[i].y, normals[i].z,
+					uvs[i].x, uvs[i].y,
+				}
+			);
     }
 
     GLuint VBO, VAO;

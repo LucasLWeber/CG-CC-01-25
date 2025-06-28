@@ -52,6 +52,8 @@ set(EXERCISES
 		M3
 		M4
 		M5
+		M6
+		GB
     Vivencial1
 		Vivencial2
 )

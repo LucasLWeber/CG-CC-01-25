@@ -12,6 +12,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 #include <map>
+#include <random>
+#include <algorithm>
 
 using namespace std;
 
@@ -97,11 +99,13 @@ struct Camera
     }
 };
 
+
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 void continous_key_press(GLFWwindow* window, Camera& camera, float currentTime);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 int setupShader();
 int setupBackgroundShader();
+int setupCurveShader();
 Geometry setupGeometry(const char* filepath);
 bool loadObject(
     const char* path,
@@ -111,6 +115,10 @@ bool loadObject(
 int loadTexture(const string& path);
 Material loadMTL(const string& path);
 GLuint setupBg(GLuint& bgVAO, GLuint& bgVBO, const char* texturePath);
+vector<glm::vec3> generateControlPointsSet(int nPoints);
+vector<glm::vec3> generateControlPointsSet();
+std::vector<glm::vec3> generatePointsSet();
+std::vector<glm::vec3> generateBezierCurve(const std::vector<glm::vec3>& controlPoints, int numPoints);
 
 const GLchar *vertexShaderSource = R"(
 	#version 400
@@ -193,12 +201,31 @@ const GLchar *bgFragmentShader = R"(
 	in vec2 TexCoords;
 	out vec4 FragColor;
 	void main()
-	{ 
+	{
 		FragColor = vec4(texture(background, TexCoords).r, texture(background, TexCoords).r, texture(background, TexCoords).r, 1.0);
-		// FragColor = texture(background, TexCoords);
 	}
 )";
 
+const GLchar *curveVertexShader = R"(
+	#version 400
+	layout (location = 0) in vec3 position;
+	uniform mat4 view;
+	uniform mat4 projection;
+	void main()
+	{
+			gl_Position = projection * view * vec4(position, 1.0);
+	}
+)";
+
+const GLchar *curveFragmentShader = R"(
+	#version 400
+	uniform vec4 finalColor;
+	out vec4 color;
+	void main()
+	{
+			color = finalColor;
+	}
+)";
 
 const GLuint WIDTH = 600, HEIGHT = 600;
 int selectedObject;
@@ -222,6 +249,7 @@ float lastX = WIDTH / 2.0f;
 float lastY = HEIGHT / 2.0f;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
+float t = 0.0f;
 
 int main()
 {
@@ -265,19 +293,13 @@ int main()
 			return -1;
 		}
 
-
     // === Geometrias ===
+		std::vector<Geometry> objects;
+
     Geometry suzzane = setupGeometry("D:/ComputacaoGrafica/RepoAulas/repo-prof/CGCCHibrido/assets/Modelos3D/SuzanneSubdiv1.obj");
-    Geometry cube = setupGeometry("D:/ComputacaoGrafica/RepoAulas/repo-prof/CGCCHibrido/assets/Modelos3D/Cube.obj");
-    Geometry basket = setupGeometry("D:/ComputacaoGrafica/RepoAulas/repo-prof/CGCCHibrido/assets/Modelos3D/Basket/10487_basketball_v1_3dmax2011_it2.obj");
-    Geometry suitecase = setupGeometry("D:/ComputacaoGrafica/RepoAulas/repo-prof/CGCCHibrido/assets/Modelos3D/case/Weapons_case.obj");
+		Geometry cube = setupGeometry("D:/ComputacaoGrafica/RepoAulas/repo-prof/CGCCHibrido/assets/Modelos3D/Cube.obj");
 
-		suitecase.position  = glm::vec3(-3.5f, 0.0f, -3.0f);
-    suzzane.position = glm::vec3(-1.0f, 0.0f, -3.0f);
-    cube.position    = glm::vec3(1.5f, 0.0f, -3.0f);
-
-    // suitecase.scaleFactor = 0.01f;
-
+		objects = { suzzane, cube };
 
     // === Uniform Locations ===
     GLint modelLoc = glGetUniformLocation(shaderID, "model");
@@ -287,6 +309,26 @@ int main()
     // === Matriz de projeção inicial ===
     glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / height, 0.1f, 100.0f);
     glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+		// === Curva parametrica
+		std::vector<glm::vec3> controlPoints = generatePointsSet();
+		std::vector<glm::vec3> bezierCurve = generateBezierCurve(controlPoints, 100);
+
+		GLuint curveShaderID = setupCurveShader();
+		std::vector<glm::vec3> curvePoints = generatePointsSet();
+
+		GLuint curveVAO, curveVBO;
+		glGenVertexArrays(1, &curveVAO);
+		glGenBuffers(1, &curveVBO);
+
+		glBindVertexArray(curveVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, curveVBO);
+		glBufferData(GL_ARRAY_BUFFER, bezierCurve.size() * sizeof(glm::vec3), &bezierCurve[0], GL_STATIC_DRAW);
+
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+
+		glBindVertexArray(0);
 
     // === OpenGL States ===
     glEnable(GL_DEPTH_TEST);
@@ -378,10 +420,42 @@ int main()
 						glBindVertexArray(0);
 				};
 			
+				static float timeAccumulator = 0.0f;
+				timeAccumulator += deltaTime * 2.0f;
 
-				renderGeometry(suzzane, 1);
-				renderGeometry(cube, 2);
-				renderGeometry(suitecase, 3);
+				for (int i = 0; i < objects.size(); ++i) {
+					// Comprimento da curva
+					float totalLength = bezierCurve.size() - 1;
+				
+					// Offset de tempo único para cada objeto (evita sobreposição)
+					float offsetT = i * 30.0f; // quanto mais alto, maior o espaçamento
+					float t = fmod(timeAccumulator + offsetT, totalLength);
+				
+					int idx = (int)t;
+					float localT = t - idx;
+				
+					// Clamp para evitar ultrapassar limites da curva
+					if (idx >= bezierCurve.size() - 1)
+						idx = bezierCurve.size() - 2;
+				
+					// Interpola posição
+					glm::vec3 p0 = bezierCurve[idx];
+					glm::vec3 p1 = bezierCurve[idx + 1];
+					glm::vec3 pos = glm::mix(p0, p1, localT);
+				
+					objects[i].position = pos;
+				
+					renderGeometry(objects[i], i + 1); // IDs diferentes
+				}
+
+				glUseProgram(curveShaderID);
+				glUniformMatrix4fv(glGetUniformLocation(curveShaderID, "view"), 1, GL_FALSE, glm::value_ptr(view));
+				glUniformMatrix4fv(glGetUniformLocation(curveShaderID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+				glUniform4f(glGetUniformLocation(curveShaderID, "finalColor"), 1.0f, 0.5f, 0.2f, 1.0f); // Laranja
+
+				glBindVertexArray(curveVAO);
+				glDrawArrays(GL_LINE_STRIP, 0, (GLsizei)bezierCurve.size());
+				glBindVertexArray(0);
 
 				// === Troca os buffers ===
 				glfwSwapBuffers(window);
@@ -430,7 +504,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         }
     }
 }
-
 
 void continous_key_press(GLFWwindow* window, Camera& camera, float currentTime)
 {
@@ -562,6 +635,43 @@ int setupBackgroundShader()
     return shaderProgram;
 }
 
+int setupCurveShader()
+{
+    auto compile = [](GLenum type, const char* src) -> GLuint {
+        GLuint shader = glCreateShader(type);
+        glShaderSource(shader, 1, &src, NULL);
+        glCompileShader(shader);
+        GLint success;
+        glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+        if (!success) {
+            char log[512];
+            glGetShaderInfoLog(shader, 512, NULL, log);
+            std::cerr << "Shader compile error: " << log << std::endl;
+        }
+        return shader;
+    };
+
+    GLuint vs = compile(GL_VERTEX_SHADER, curveVertexShader);
+    GLuint fs = compile(GL_FRAGMENT_SHADER, curveFragmentShader);
+
+    GLuint program = glCreateProgram();
+    glAttachShader(program, vs);
+    glAttachShader(program, fs);
+    glLinkProgram(program);
+
+    GLint success;
+    glGetProgramiv(program, GL_LINK_STATUS, &success);
+    if (!success) {
+        char log[512];
+        glGetProgramInfoLog(program, 512, NULL, log);
+        std::cerr << "Shader link error: " << log << std::endl;
+    }
+
+    glDeleteShader(vs);
+    glDeleteShader(fs);
+    return program;
+}
+
 int loadTexture(const string& path)
 {
     GLuint texID;
@@ -587,6 +697,7 @@ int loadTexture(const string& path)
     glBindTexture(GL_TEXTURE_2D, 0);
     return texID;
 }
+
 
 bool loadObject(
 	const char* path,
@@ -686,17 +797,19 @@ Geometry setupGeometry(const char* filepath)
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GLfloat), vertices.data(), GL_STATIC_DRAW);
     glGenVertexArrays(1, &VAO);
     glBindVertexArray(VAO);
+
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(6 * sizeof(GLfloat)));
     glEnableVertexAttribArray(2);
+		
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
     Geometry geom;
     geom.VAO = VAO;
-    geom.vertexCount = vertices.size() / 6;
+    geom.vertexCount = vertices.size() / 6; 
     string basePath = string(filepath).substr(0, string(filepath).find_last_of("/"));
     string mtlPath = basePath + "/" + mtlFilePath;
     Material mat = loadMTL(mtlPath);
@@ -829,3 +942,73 @@ GLuint setupBg(GLuint &VAO, GLuint &VBO, const char* imagePath)
     return textureID;
 }
 
+std::vector<glm::vec3> generateControlPointsSet(int nPoints)
+{
+    std::vector<glm::vec3> controlPoints;
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> distribution(-0.9f, 0.9f); // Intervalo aberto (-0.9, 0.9)
+
+    for (int i = 0; i < nPoints; i++)
+    {
+        glm::vec3 point;
+        do
+        {
+            point.x = distribution(gen);
+            point.y = distribution(gen);
+        }
+        while (find(controlPoints.begin(), controlPoints.end(), point) != controlPoints.end());
+
+        point.z = 0.0f;
+
+        controlPoints.push_back(point);
+    }
+
+    return controlPoints;
+}
+
+vector<glm::vec3> generateControlPointsSet()
+{
+    vector<glm::vec3> controlPoints;
+    controlPoints.push_back(glm::vec3(-0.6, -0.4, 0.0));
+    controlPoints.push_back(glm::vec3(-0.4, -0.6, 0.0));
+    controlPoints.push_back(glm::vec3(-0.2, -0.2, 0.0));
+    controlPoints.push_back(glm::vec3(0.0, 0.0, 0.0));
+    controlPoints.push_back(glm::vec3(0.2, 0.2, 0.0));
+    controlPoints.push_back(glm::vec3(0.4, 0.6, 0.0));
+    controlPoints.push_back(glm::vec3(0.6, 0.4, 0.0));
+    return controlPoints;
+}
+
+std::vector<glm::vec3> generatePointsSet() {
+	std::vector<glm::vec3> points;
+	points.push_back(glm::vec3(-2.0f,  0.0f, -2.0f));
+	points.push_back(glm::vec3(-1.0f,  2.0f, -1.5f));
+	points.push_back(glm::vec3( 0.5f,  1.5f, -2.5f));
+	points.push_back(glm::vec3( 2.0f,  0.0f, -3.0f));
+	return points;
+}
+
+std::vector<glm::vec3> generateBezierCurve(const std::vector<glm::vec3>& controlPoints, int numPoints)
+{
+    std::vector<glm::vec3> curvePoints;
+    int n = controlPoints.size() - 1;
+
+    for (int i = 0; i <= numPoints; ++i)
+    {
+        float t = (float)i / numPoints;
+        glm::vec3 point(0.0f);
+
+        for (int j = 0; j <= n; ++j)
+        {
+            float binomial = glm::pow(1 - t, n - j) * glm::pow(t, j);
+            binomial *= static_cast<float>(tgamma(n + 1)) / (tgamma(j + 1) * tgamma(n - j + 1));
+            point += binomial * controlPoints[j];
+        }
+
+        curvePoints.push_back(point);
+    }
+
+    return curvePoints;
+}
